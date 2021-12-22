@@ -21,7 +21,7 @@ let server = app.listen(process.env.PORT || 3000, function () {
 	console.log("Listening on port " + server.address().port);
 });
 
-global.allSportsSocket = require("socket.io")(server, {
+global.ngPartneurChat = require("socket.io")(server, {
 	cors: {
 		credentials: true,
 		origin: function (origin, callback) {
@@ -39,7 +39,7 @@ global.allSportsSocket = require("socket.io")(server, {
 	},
 });
 
-io(allSportsSocket);
+io(ngPartneurChat);
 
 function serverShutDown(reason) {
 	console.info(reason + " signal received.");

@@ -5,7 +5,7 @@ var Chat = mongoose.model("Chat");
 // var Notification = mongoose.model("Notification");
 
 module.exports = () => {
-	allSportsSocket.on("connection", (socket) => {
+	ngPartneurChat.on("connection", (socket) => {
 		console.log("Client connected to home", socket.id);
 		// create Notification
 		socket.on("createNotification", (notification) => {
@@ -25,7 +25,7 @@ module.exports = () => {
 							.populate("sentTo", "firstName lastName image _id")
 							.execPopulate((err, doc) => {
 								console.log("Notification Saved", doc);
-								allSportsSocket.emit(element + "Notifi", doc);
+								ngPartneurChat.emit(element + "Notifi", doc);
 								console.log("Notification dispatched.");
 							});
 					}
@@ -59,13 +59,15 @@ module.exports = () => {
 					.populate("sentTo", "firstName lastName  image _id")
 					.execPopulate((err, doc) => {
 						console.log("message Saved", doc);
-						Chat.countDocuments(
-							{ sentTo: message.sentTo, status: "un-read" },
+						Chat.countDocuments({
+								sentTo: message.sentTo,
+								status: "un-read"
+							},
 							function (err, c) {
-								allSportsSocket.emit(message.sentTo + "unReadCount", c);
+								ngPartneurChat.emit(message.sentTo + "unReadCount", c);
 							}
 						);
-						allSportsSocket.emit(message.sentTo + "Msg", doc);
+						ngPartneurChat.emit(message.sentTo + "Msg", doc);
 						console.log("Message dispatched.");
 					});
 			});

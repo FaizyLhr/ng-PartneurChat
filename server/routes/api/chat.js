@@ -8,9 +8,6 @@ let {
 const {
 	isAuthentic,
 	isRead,
-	isToken,
-	isFav,
-	isUnFav,
 	isMsgDel,
 } = require("../auth");
 

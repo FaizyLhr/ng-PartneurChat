@@ -85,8 +85,8 @@ function isRead(req, res, next) {
 
 function isAuthentic(req, res, next) {
 	if (
-		req.user._id.toString() === req.friend.user1._id.toString() ||
-		req.user._id.toString() === req.friend.user2._id.toString()
+		req.sender._id.toString() === req.friend.user1._id.toString() ||
+		req.sender._id.toString() === req.friend.user2._id.toString()
 	) {
 		// console.log("if");
 		next();
@@ -157,6 +157,7 @@ function isMsgDel(req, res, next) {
 	}
 	next();
 }
+
 function isFav(req, res, next) {
 	// console.log(req.msg.isFav);
 	if (req.msg.isFav === true) {
@@ -195,7 +196,9 @@ const isToken = function (req, res, next) {
 				next(new UnauthorizedResponse(err));
 				return;
 			} else {
-				UserModel.findOne({ email: data.email })
+				UserModel.findOne({
+						email: data.email
+					})
 					.then((user) => {
 						// console.log(user);
 						req.user = user;

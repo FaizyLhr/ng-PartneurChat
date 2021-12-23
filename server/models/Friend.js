@@ -28,6 +28,7 @@ const FriendsSchema = new mongoose.Schema({
 	lastMessage: {
 		type: mongoose.Schema.Types.ObjectId,
 		ref: "Chat",
+		default: null
 	},
 	chatMessages: [{
 		type: mongoose.Schema.Types.ObjectId,

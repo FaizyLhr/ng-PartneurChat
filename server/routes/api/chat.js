@@ -323,8 +323,8 @@ router.get("/get/read/:friendID/:senderID", isAuthentic, (req, res, next) => {
 	});
 });
 
-// Delete a Message
-router.put("/delChat/:msgID", isMsgDel, (req, res, next) => {
+// Delete a Message //Done
+router.put("/del/:msgID", isMsgDel, (req, res, next) => {
 	console.log(req.user);
 	req.msg.isDeleted = true;
 	req.msg.text = null;

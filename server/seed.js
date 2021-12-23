@@ -30,9 +30,9 @@ async function init() {
 	await mongoose.connection.db.dropDatabase();
 
 	await defaultUser();
-	await user();
-	await friend();
-	await chat();
+	// await user();
+	// await friend();
+	// await chat();
 
 	exit();
 }

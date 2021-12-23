@@ -1,6 +1,9 @@
 let router = require("express").Router();
 
-let { OkResponse, BadRequestResponse } = require("express-http-response");
+let {
+	OkResponse,
+	BadRequestResponse
+} = require("express-http-response");
 
 const {
 	isAuthentic,
@@ -18,7 +21,9 @@ const ImageModel = require("../../models/Image");
 
 // get user for every time mail given
 router.param("email", (req, res, next, email) => {
-	UserModel.findOne({ email }, (err, user) => {
+	UserModel.findOne({
+		email
+	}, (err, user) => {
 		if (!err && user !== null) {
 			// console.log(user);
 			req.emailUser = user;
@@ -30,13 +35,15 @@ router.param("email", (req, res, next, email) => {
 });
 
 // get friend for every time friendSlug given
-router.param("friendSlug", function (req, res, next, slug) {
-	FriendModel.findOne({ slug })
+router.param("friendID", function (req, res, next, _id) {
+	FriendModel.findOne({
+			_id
+		})
 		.populate("user1")
 		.populate("user2")
 		.then((friend) => {
 			if (!friend) {
-				return next(new BadRequestResponse("No User Found"));
+				return next(new BadRequestResponse("No Friend Found"));
 			}
 			req.friend = friend;
 			// console.log(req.friend);
@@ -48,12 +55,43 @@ router.param("friendSlug", function (req, res, next, slug) {
 		});
 });
 
+// get Sender for every time Sender ID given
+router.param("senderID", (req, res, next, _id) => {
+	UserModel.findOne({
+		_id
+	}, (err, user) => {
+		if (!err && user !== null) {
+			// console.log(user);
+			req.sender = user;
+			return next();
+		}
+		return next(new BadRequestResponse("User not found!", 423));;
+	});
+});
+
+// get Receiver for every time Receiver ID given
+router.param("receiverID", (req, res, next, _id) => {
+	// console.log(_id);
+	UserModel.findOne({
+		_id
+	}, (err, user) => {
+		if (!err && user !== null) {
+			// console.log(user);
+			req.receiver = user;
+			return next();
+		}
+		return next(new BadRequestResponse("User not found!", 423));;
+	});
+});
+
 // get Message for every time msgSlug given
-router.param("msgSlug", function (req, res, next, slug) {
-	ChatModel.findOne({ slug })
+router.param("msgID", function (req, res, next, _id) {
+	ChatModel.findOne({
+			_id
+		})
 		.then((msg) => {
 			if (!msg) {
-				return next(new BadRequestResponse("No User Found"));
+				return next(new BadRequestResponse("No Message Found"));
 			}
 			req.msg = msg;
 			// console.log(req.msg);
@@ -66,8 +104,10 @@ router.param("msgSlug", function (req, res, next, slug) {
 });
 
 // get Image for every time imageSlug given
-router.param("imageSlug", function (req, res, next, slug) {
-	ImageModel.findOne({ slug })
+router.param("imageID", function (req, res, next, _id) {
+	ImageModel.findOne({
+			_id
+		})
 		.then((image) => {
 			if (!image) {
 				return next(new BadRequestResponse("No User Found"));
@@ -82,8 +122,8 @@ router.param("imageSlug", function (req, res, next, slug) {
 		});
 });
 
-// Add a new Message or Reply a chat Message
-router.post("/chat/:friendSlug", isToken, isAuthentic, (req, res, next) => {
+// Add a new Message or Reply a chat Message //Done
+router.post("/add/:friendID/:senderID", isAuthentic, (req, res, next) => {
 	// console.log(req.body);
 	if (req.body.text === undefined || req.body.text.trim().length === 0) {
 		// console.log("ID");
@@ -94,10 +134,10 @@ router.post("/chat/:friendSlug", isToken, isAuthentic, (req, res, next) => {
 	let chat = new ChatModel();
 
 	chat.friendID = req.friend._id;
-	chat.sender = req.user._id;
+	chat.sender = req.sender._id;
 	chat.text = req.body.text;
 
-	if (req.user.email === req.friend.user1.email) {
+	if (req.sender.email === req.friend.user1.email) {
 		chat.receiver = req.friend.user2;
 	} else {
 		chat.receiver = req.friend.user1;
@@ -125,15 +165,15 @@ router.post("/chat/:friendSlug", isToken, isAuthentic, (req, res, next) => {
 				})
 				.catch((err) => next(new BadRequestResponse(err)));
 			// console.log(result);
-			next(new OkResponse({ Chats: result }));
+			next(new OkResponse(result));
 		}
 	});
 });
 
-// View All Messages
-router.get("/chat/:friendSlug", isToken, isAuthentic, (req, res, next) => {
+// View All Messages of Friend // Done
+router.get("/get/all/:friendID", (req, res, next) => {
 	// console.log(req.friend);
-
+	// console.log(req.sender);
 	const options = {
 		page: +req.query.page || 1,
 		limit: +req.query.limit || 20,
@@ -142,15 +182,14 @@ router.get("/chat/:friendSlug", isToken, isAuthentic, (req, res, next) => {
 		},
 	};
 
-	let query = {
-		friend: req.friend._id,
-	};
+	let query = {};
+	query.friendID = req.friend._id;
 
-	// console.log(query);
 	ChatModel.paginate(query, options, (err, history) => {
 		if (err) {
+			console.log("err", err);
 			// console.log(err);
-			next(new BadRequestResponse("Server Error"));
+			next(new BadRequestResponse(err));
 		} else {
 			// console.log(history.docs);
 			next(
@@ -161,10 +200,8 @@ router.get("/chat/:friendSlug", isToken, isAuthentic, (req, res, next) => {
 						lastMessage: req.friend.lastMessage,
 						createdAt: req.friend.createdAt,
 						updatedAt: req.friend.updatedAt,
-						Receiver:
-							req.friend.user1.email === req.user.email
-								? req.friend.user2.email
-								: req.friend.user1.email,
+						Receiver: req.friend.user1.email === req.sender.email ?
+							req.friend.user2.email : req.friend.user1.email,
 					},
 				})
 			);
@@ -175,9 +212,9 @@ router.get("/chat/:friendSlug", isToken, isAuthentic, (req, res, next) => {
 	});
 });
 
-// Change chat status to Read
-router.put("/readChat/:msgSlug", isToken, isRead, (req, res, next) => {
-	console.log(req.user);
+// Change chat status to Read //Done
+router.put("/read/:msgID", isRead, (req, res, next) => {
+	// console.log(req.user);
 	req.msg.isRead = true;
 
 	req.msg.save((err, result) => {
@@ -193,19 +230,11 @@ router.put("/readChat/:msgSlug", isToken, isRead, (req, res, next) => {
 	});
 });
 
-// Get UnRead Count message
+// Get UnRead Count message //Done
 router.get(
-	"/unReadCount/:friendSlug",
-	isToken,
-	isAuthentic,
-	(req, res, next) => {
-		// console.log(req.user);
-		// console.log(req.friend);
-		// console.log(req.friend.user1.email);
-
+	"/get/unReadCount/:friendID", (req, res, next) => {
 		// console.log(query);
-		ChatModel.count(
-			{
+		ChatModel.count({
 				friend: req.friend._id,
 				isRead: false,
 			},
@@ -214,20 +243,16 @@ router.get(
 					console.log(err);
 					return next(new BadRequestResponse(err));
 				}
-				return next(new OkResponse({ count }));
+				return next(new OkResponse({
+					count
+				}));
 			}
 		);
 	}
 );
 
-// View All Unread Messages
-router.get("/unRead/:friendSlug", isToken, isAuthentic, (req, res, next) => {
-	// console.log(req.user);
-	// console.log(req.friend);
-	// console.log(req.friend.user1.email);
-
-	// console.log(query);
-
+// View All Unread Messages //Done
+router.get("/get/unRead/:friendID/:senderID", isAuthentic, (req, res, next) => {
 	const options = {
 		page: +req.query.page || 1,
 		limit: +req.query.limit || 20,
@@ -237,7 +262,7 @@ router.get("/unRead/:friendSlug", isToken, isAuthentic, (req, res, next) => {
 	};
 
 	let query = {
-		friend: req.friend._id,
+		friendID: req.friend._id,
 		isRead: false,
 	};
 
@@ -245,42 +270,26 @@ router.get("/unRead/:friendSlug", isToken, isAuthentic, (req, res, next) => {
 	ChatModel.paginate(query, options, (err, history) => {
 		if (err) {
 			// console.log(err);
-			next(new BadRequestResponse("Server Error"));
-		} else {
-			// console.log(history.docs);
-			// console.log(req.friend.user1.id);
-			// console.log(req.friend.user1._id);
-			// console.log(req.friend.user1._id.toString() === req.user._id.toString());
-			// console.log(req.user._id);
-			// console.log(req.friend.user1._id);
-			// console.log(req.friend.user2.email);
-			// console.log(req.friend.user1.email);
-			next(
-				new OkResponse({
-					Chats: history.docs,
-					createdAt: req.friend.createdAt,
-					updatedAt: req.friend.updatedAt,
-					Receiver:
-						req.friend.user1.email === req.user.email
-							? req.friend.user2.email
-							: req.friend.user1.email,
-				})
-			);
+			return next(new BadRequestResponse("Server Error"));
 		}
+
+		next(
+			new OkResponse({
+				Chats: history.docs,
+				createdAt: req.friend.createdAt,
+				updatedAt: req.friend.updatedAt,
+				Receiver: req.friend.user1.email === req.sender.email ?
+					req.friend.user2.email : req.friend.user1.email,
+			})
+		);
 	}).catch((error) => {
 		console.log(error);
 		next(new BadRequestResponse(error));
 	});
 });
 
-// View All Read Messages
-router.get("/read/:friendSlug", isToken, isAuthentic, (req, res, next) => {
-	// console.log(req.user);
-	// console.log(req.friend);
-	// console.log(req.friend.user1.email);
-
-	// console.log(query);
-
+// View All Read Messages //Done
+router.get("/get/read/:friendID/:senderID", isAuthentic, (req, res, next) => {
 	const options = {
 		page: +req.query.page || 1,
 		limit: +req.query.limit || 20,
@@ -294,124 +303,20 @@ router.get("/read/:friendSlug", isToken, isAuthentic, (req, res, next) => {
 		isRead: true,
 	};
 
-	// console.log(query);
 	ChatModel.paginate(query, options, (err, history) => {
 		if (err) {
-			// console.log(err);
-			next(new BadRequestResponse("Server Error"));
-		} else {
-			// console.log(history.docs);
-			// console.log(req.friend.user1.id);
-			// console.log(req.friend.user1._id);
-			// console.log(req.friend.user1._id.toString() === req.user._id.toString());
-			// console.log(req.user._id);
-			// console.log(req.friend.user1._id);
-			// console.log(req.friend.user2.email);
-			// console.log(req.friend.user1.email);
-			next(
-				new OkResponse({
-					Chats: history.docs,
-					createdAt: req.friend.createdAt,
-					updatedAt: req.friend.updatedAt,
-					Receiver:
-						req.friend.user1.email === req.user.email
-							? req.friend.user2.email
-							: req.friend.user1.email,
-				})
-			);
-		}
-	}).catch((error) => {
-		console.log(error);
-		next(new BadRequestResponse(error));
-	});
-});
-
-// Add Chat Message to Favorites
-router.put("/fav/:msgSlug", isToken, isFav, (req, res, next) => {
-	// console.log(req.user);
-	req.msg.isFav = true;
-
-	req.msg.save((err, result) => {
-		if (err) {
-			// console.log(err);
+			// console.log("err", err);
 			return next(new BadRequestResponse(err));
-		} else {
-			// console.log(result);
-			return next(new OkResponse({ Chat: result.toJSON() }));
 		}
-	});
-});
-
-// UnFavorite a chat
-router.put("/unFav/:msgSlug", isToken, isUnFav, (req, res, next) => {
-	// console.log(req.user);
-	req.msg.isFav = false;
-
-	req.msg.save((err, result) => {
-		if (err) {
-			// console.log(err);
-			return next(new BadRequestResponse(err));
-		} else {
-			// console.log(result);
-			return next(new OkResponse({ Chat: result.toJSON() }));
-		}
-	});
-});
-
-// Edit a chat
-router.put("/editChat/:msgSlug", isToken, (req, res, next) => {
-	// console.log(req.body);
-	if (req.body.text === undefined || req.body.text.trim().length === 0) {
-		return next(new BadRequestResponse("Missing required parameter", 422));
-	}
-	req.msg.text = req.body.text;
-
-	req.msg.save((err, result) => {
-		if (err) {
-			// console.log(err);
-			return next(new BadRequestResponse(err));
-		} else {
-			// console.log(result);
-			return next(new OkResponse({ Chat: result.toJSON() }));
-		}
-	});
-});
-
-// View All Favorite Chat Messages
-router.get("/favChat/:friendSlug", isToken, isAuthentic, (req, res, next) => {
-	// console.log(query);
-
-	const options = {
-		page: +req.query.page || 1,
-		limit: +req.query.limit || 20,
-		sort: {
-			createdAt: -1,
-		},
-	};
-
-	let query = {
-		friend: req.friend._id,
-		isFav: true,
-	};
-
-	// console.log(query);
-	ChatModel.paginate(query, options, (err, history) => {
-		if (err) {
-			// console.log(err);
-			next(new BadRequestResponse("Server Error"));
-		} else {
-			next(
-				new OkResponse({
-					Chats: history.docs,
-					createdAt: req.friend.createdAt,
-					updatedAt: req.friend.updatedAt,
-					Receiver:
-						req.friend.user1.email === req.user.email
-							? req.friend.user2.email
-							: req.friend.user1.email,
-				})
-			);
-		}
+		next(
+			new OkResponse({
+				Chats: history.docs,
+				createdAt: req.friend.createdAt,
+				updatedAt: req.friend.updatedAt,
+				Receiver: req.friend.user1.email === req.sender.email ?
+					req.friend.user2.email : req.friend.user1.email,
+			})
+		);
 	}).catch((error) => {
 		console.log(error);
 		next(new BadRequestResponse(error));
@@ -419,7 +324,7 @@ router.get("/favChat/:friendSlug", isToken, isAuthentic, (req, res, next) => {
 });
 
 // Delete a Message
-router.put("/delChat/:msgSlug", isToken, isMsgDel, (req, res, next) => {
+router.put("/delChat/:msgID", isMsgDel, (req, res, next) => {
 	console.log(req.user);
 	req.msg.isDeleted = true;
 	req.msg.text = null;

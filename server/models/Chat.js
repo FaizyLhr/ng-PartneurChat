@@ -5,9 +5,9 @@ const mongoosePaginate = require("mongoose-paginate-v2");
 const ChatSchema = new mongoose.Schema(
 	{
 		slug: { type: String, lowercase: true, unique: true },
-		friendID: {
+		chatGroupID: {
 			type: mongoose.Schema.Types.ObjectId,
-			ref: "Friend",
+			ref: "ChatGroup",
 		},
 		sender: {
 			type: mongoose.Schema.Types.ObjectId,

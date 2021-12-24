@@ -1,49 +1,45 @@
 let router = require("express").Router();
 
-let {
-	OkResponse,
-	BadRequestResponse
-} = require("express-http-response");
+let { OkResponse, BadRequestResponse } = require("express-http-response");
 
-const {
-	isAuthentic,
-	isRead,
-	isMsgDel,
-} = require("../auth");
+const { isAuthentic, isRead, isMsgDel } = require("../auth");
 
 const ChatModel = require("../../models/Chat");
-const FriendModel = require("../../models/Friend");
+const ChatGroupModel = require("../../models/ChatGroup");
 const UserModel = require("../../models/User");
 const ImageModel = require("../../models/Image");
 
 // get user for every time mail given
 router.param("email", (req, res, next, email) => {
-	UserModel.findOne({
-		email
-	}, (err, user) => {
-		if (!err && user !== null) {
-			// console.log(user);
-			req.emailUser = user;
-			return next();
+	UserModel.findOne(
+		{
+			email,
+		},
+		(err, user) => {
+			if (!err && user !== null) {
+				// console.log(user);
+				req.emailUser = user;
+				return next();
+			}
+			next(new BadRequestResponse("User not found!", 423));
+			return;
 		}
-		next(new BadRequestResponse("User not found!", 423));
-		return;
-	});
+	);
 });
 
 // get friend for every time friendSlug given
-router.param("friendID", function (req, res, next, _id) {
-	FriendModel.findOne({
-			_id
-		})
+router.param("chatGroupID", function (req, res, next, _id) {
+	ChatGroupModel.findOne({
+		_id,
+	})
 		.populate("user1")
 		.populate("user2")
-		.then((friend) => {
-			if (!friend) {
-				return next(new BadRequestResponse("No Friend Found"));
+		.then((chatGroup) => {
+			if (!chatGroup) {
+				return next(new BadRequestResponse("No chatGroup Found"));
 			}
-			req.friend = friend;
-			// console.log(req.friend);
+			req.chatGroup = chatGroup;
+			// console.log(req.chatGroup);
 			return next();
 		})
 		.catch((err) => {
@@ -54,38 +50,32 @@ router.param("friendID", function (req, res, next, _id) {
 
 // get Sender for every time Sender ID given
 router.param("senderID", (req, res, next, _id) => {
-	UserModel.findOne({
-		_id
-	}, (err, user) => {
+	UserModel.findOne({ _id }, (err, user) => {
 		if (!err && user !== null) {
 			// console.log(user);
 			req.sender = user;
 			return next();
 		}
-		return next(new BadRequestResponse("User not found!", 423));;
+		return next(new BadRequestResponse("User not found!", 423));
 	});
 });
 
 // get Receiver for every time Receiver ID given
 router.param("receiverID", (req, res, next, _id) => {
 	// console.log(_id);
-	UserModel.findOne({
-		_id
-	}, (err, user) => {
+	UserModel.findOne({ _id }, (err, user) => {
 		if (!err && user !== null) {
 			// console.log(user);
 			req.receiver = user;
 			return next();
 		}
-		return next(new BadRequestResponse("User not found!", 423));;
+		return next(new BadRequestResponse("User not found!", 423));
 	});
 });
 
 // get Message for every time msgSlug given
 router.param("msgID", function (req, res, next, _id) {
-	ChatModel.findOne({
-			_id
-		})
+	ChatModel.findOne({ _id })
 		.then((msg) => {
 			if (!msg) {
 				return next(new BadRequestResponse("No Message Found"));
@@ -102,9 +92,7 @@ router.param("msgID", function (req, res, next, _id) {
 
 // get Image for every time imageSlug given
 router.param("imageID", function (req, res, next, _id) {
-	ImageModel.findOne({
-			_id
-		})
+	ImageModel.findOne({ _id })
 		.then((image) => {
 			if (!image) {
 				return next(new BadRequestResponse("No User Found"));
@@ -120,7 +108,7 @@ router.param("imageID", function (req, res, next, _id) {
 });
 
 // Add a new Message or Reply a chat Message //Done
-router.post("/add/:friendID/:senderID", isAuthentic, (req, res, next) => {
+router.post("/add/:chatGroupID/:senderID", isAuthentic, (req, res, next) => {
 	// console.log(req.body);
 	if (req.body.text === undefined || req.body.text.trim().length === 0) {
 		// console.log("ID");
@@ -130,14 +118,14 @@ router.post("/add/:friendID/:senderID", isAuthentic, (req, res, next) => {
 	// save the text and send Event
 	let chat = new ChatModel();
 
-	chat.friendID = req.friend._id;
+	chat.chatGroupID = req.chatGroup._id;
 	chat.sender = req.sender._id;
 	chat.text = req.body.text;
 
-	if (req.sender.email === req.friend.user1.email) {
-		chat.receiver = req.friend.user2;
+	if (req.sender.email === req.chatGroup.user1.email) {
+		chat.receiver = req.chatGroup.user2;
 	} else {
-		chat.receiver = req.friend.user1;
+		chat.receiver = req.chatGroup.user1;
 	}
 
 	if (req.body.replyTo) {
@@ -151,9 +139,9 @@ router.post("/add/:friendID/:senderID", isAuthentic, (req, res, next) => {
 		if (err) {
 			return next(new BadRequestResponse("Server Error"));
 		} else {
-			req.friend.chatMessages.push(chat._id);
-			req.friend.lastMessage = chat._id;
-			req.friend
+			req.chatGroup.chatMessages.push(chat._id);
+			req.chatGroup.lastMessage = chat._id;
+			req.chatGroup
 				.save()
 				.then(() => {
 					// allSportsSocket.emit("conversation" + chat.receiver);
@@ -168,8 +156,8 @@ router.post("/add/:friendID/:senderID", isAuthentic, (req, res, next) => {
 });
 
 // View All Messages of Friend // Done
-router.get("/get/all/:friendID", (req, res, next) => {
-	// console.log(req.friend);
+router.get("/get/all/:chatGroupID", (req, res, next) => {
+	console.log(req.chatGroup);
 	// console.log(req.sender);
 	const options = {
 		page: +req.query.page || 1,
@@ -180,7 +168,7 @@ router.get("/get/all/:friendID", (req, res, next) => {
 	};
 
 	let query = {};
-	query.friendID = req.friend._id;
+	query.chatGroupID = req.chatGroup._id;
 
 	ChatModel.paginate(query, options, (err, history) => {
 		if (err) {
@@ -193,12 +181,11 @@ router.get("/get/all/:friendID", (req, res, next) => {
 				new OkResponse({
 					Chat: history.docs,
 					user: {
-						_id: req.friend._id,
-						lastMessage: req.friend.lastMessage,
-						createdAt: req.friend.createdAt,
-						updatedAt: req.friend.updatedAt,
-						Receiver: req.friend.user1.email === req.sender.email ?
-							req.friend.user2.email : req.friend.user1.email,
+						_id: req.chatGroup._id,
+						lastMessage: req.chatGroup.lastMessage,
+						createdAt: req.chatGroup.createdAt,
+						updatedAt: req.chatGroup.updatedAt,
+						// Receiver: req.friend.user1.email === req.sender.email ? req.friend.user2.email : req.friend.user1.email,
 					},
 				})
 			);
@@ -228,38 +215,27 @@ router.put("/read/:msgID", isRead, (req, res, next) => {
 });
 
 // Get UnRead Count message //Done
-router.get(
-	"/get/unReadCount/:friendID", (req, res, next) => {
-		// console.log(query);
-		ChatModel.count({
-				friend: req.friend._id,
-				isRead: false,
-			},
-			(err, count) => {
-				if (err) {
-					console.log(err);
-					return next(new BadRequestResponse(err));
-				}
-				return next(new OkResponse({
-					count
-				}));
-			}
-		);
-	}
-);
+router.get("/get/unReadCount/:chatGroupID", (req, res, next) => {
+	// console.log(query);
+	ChatModel.count({ chatGroup: req.chatGroup._id, isRead: false }, (err, count) => {
+		if (err) {
+			console.log(err);
+			return next(new BadRequestResponse(err));
+		}
+		return next(new OkResponse({ count }));
+	});
+});
 
 // View All Unread Messages //Done
-router.get("/get/unRead/:friendID/:senderID", isAuthentic, (req, res, next) => {
+router.get("/get/unRead/:chatGroupID/:senderID", isAuthentic, (req, res, next) => {
 	const options = {
 		page: +req.query.page || 1,
 		limit: +req.query.limit || 20,
-		sort: {
-			createdAt: -1,
-		},
+		sort: { createdAt: -1 },
 	};
 
 	let query = {
-		friendID: req.friend._id,
+		chatGroupID: req.chatGroup._id,
 		isRead: false,
 	};
 
@@ -273,10 +249,9 @@ router.get("/get/unRead/:friendID/:senderID", isAuthentic, (req, res, next) => {
 		next(
 			new OkResponse({
 				Chats: history.docs,
-				createdAt: req.friend.createdAt,
-				updatedAt: req.friend.updatedAt,
-				Receiver: req.friend.user1.email === req.sender.email ?
-					req.friend.user2.email : req.friend.user1.email,
+				createdAt: req.chatGroup.createdAt,
+				updatedAt: req.chatGroup.updatedAt,
+				Receiver: req.chatGroup.user1.email === req.sender.email ? req.chatGroup.user2.email : req.chatGroup.user1.email,
 			})
 		);
 	}).catch((error) => {
@@ -286,7 +261,7 @@ router.get("/get/unRead/:friendID/:senderID", isAuthentic, (req, res, next) => {
 });
 
 // View All Read Messages //Done
-router.get("/get/read/:friendID/:senderID", isAuthentic, (req, res, next) => {
+router.get("/get/read/:chatGroupID/:senderID", isAuthentic, (req, res, next) => {
 	const options = {
 		page: +req.query.page || 1,
 		limit: +req.query.limit || 20,
@@ -296,7 +271,7 @@ router.get("/get/read/:friendID/:senderID", isAuthentic, (req, res, next) => {
 	};
 
 	let query = {
-		friend: req.friend._id,
+		chatGroup: req.chatGroup._id,
 		isRead: true,
 	};
 
@@ -308,10 +283,9 @@ router.get("/get/read/:friendID/:senderID", isAuthentic, (req, res, next) => {
 		next(
 			new OkResponse({
 				Chats: history.docs,
-				createdAt: req.friend.createdAt,
-				updatedAt: req.friend.updatedAt,
-				Receiver: req.friend.user1.email === req.sender.email ?
-					req.friend.user2.email : req.friend.user1.email,
+				createdAt: req.chatGroup.createdAt,
+				updatedAt: req.chatGroup.updatedAt,
+				Receiver: req.chatGroup.user1.email === req.sender.email ? req.chatGroup.user2.email : req.chatGroup.user1.email,
 			})
 		);
 	}).catch((error) => {

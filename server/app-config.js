@@ -13,11 +13,7 @@ const multer = require("multer");
 let isProduction = process.env.NODE_ENV === "production";
 
 module.exports = (app) => {
-	var allowedOrigins = [
-		"http://localhost:4200",
-		"http://localhost:4300",
-		"http://localhost:3000",
-	];
+	var allowedOrigins = ["http://localhost:4200", "http://localhost:4300", "http://localhost:3000"];
 	app.use(
 		cors({
 			credentials: true,
@@ -26,9 +22,7 @@ module.exports = (app) => {
 				// (like mobile apps or curl requests)
 				if (!origin) return callback(null, true);
 				if (allowedOrigins.indexOf(origin) === -1) {
-					var msg =
-						"The CORS policy for this site does not " +
-						"allow access from the specified Origin.";
+					var msg = "The CORS policy for this site does not " + "allow access from the specified Origin.";
 					return callback(new Error(msg), false);
 				}
 				return callback(null, true);
@@ -71,9 +65,7 @@ module.exports = (app) => {
 			console.log(err);
 		})
 		.then(() => {
-			console.log(
-				`connected to db in ${isProduction ? "Prod" : "Dev"} environment`
-			);
+			console.log(`connected to db in ${isProduction ? "Prod" : "Dev"} environment`);
 		});
 
 	if (!isProduction) {
@@ -82,7 +74,7 @@ module.exports = (app) => {
 
 	require("./models/User");
 	require("./models/Chat");
-	require("./models/Friend");
+	require("./models/ChatGroup");
 
 	require("./utilities/passport");
 

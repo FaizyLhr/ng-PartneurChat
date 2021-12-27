@@ -32,8 +32,6 @@ router.param("chatGroupID", function (req, res, next, _id) {
 	ChatGroupModel.findOne({
 		_id,
 	})
-		.populate("user1")
-		.populate("user2")
 		.then((chatGroup) => {
 			if (!chatGroup) {
 				return next(new BadRequestResponse("No chatGroup Found"));
@@ -198,23 +196,26 @@ router.get("/get/all/:chatGroupID", (req, res, next) => {
 });
 
 // Change chat status to Read //Done
-router.put("/read/:msgID", isRead, (req, res, next) => {
+router.put("/read/:chatGroupID", (req, res, next) => {
 	// console.log(req.user);
-	req.msg.isRead = true;
 
-	ChatGroupModel.findOne({ _id: req.msg.groupChatID })
-		.then((chatGroup) => {
-			if (!chatGroup) {
-				return next(new BadRequestResponse("No chatGroup Found"));
+	ChatModel.find({ _id: req.chatGroup._id, isRead: false })
+		.then((chats) => {
+			if (!chats) {
+				return next(new BadRequestResponse("No chats Found"));
 			}
-			chatGroup.unReadCount = 0;
-			chatGroup.save((err, result) => {
-				if (err) return next(new BadRequestResponse(err));
-				console.log("Unread Count set to 0");
+			chats.forEach((e) => {
+				console.log(e);
+				e.isRead = true;
+				e.save((err, result) => {
+					if (err) return next(new BadRequestResponse(err));
+					console.log("Msg Read");
+				});
 			});
-			req.msg.save((err, result) => {
+			req.chatGroup.unReadCount = 0;
+			req.chatGroup.save((err, result) => {
 				if (err) return next(new BadRequestResponse(err));
-				return next(new OkResponse(req.msg));
+				return next(new OkResponse(req.chatGroup));
 			});
 		})
 		.catch((err) => next(new BadRequestResponse(err)));

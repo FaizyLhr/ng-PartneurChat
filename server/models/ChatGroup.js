@@ -64,6 +64,7 @@ const ChatGroupSchema = new mongoose.Schema(
 				ref: "Video",
 			},
 		],
+		unReadCount: { type: Number, default: 0 },
 		currentStatus: {
 			type: Number,
 			default: 2,

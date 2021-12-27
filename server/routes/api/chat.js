@@ -141,6 +141,7 @@ router.post("/add/:chatGroupID/:senderID", isAuthentic, (req, res, next) => {
 		} else {
 			req.chatGroup.chatMessages.push(chat._id);
 			req.chatGroup.lastMessage = chat._id;
+			req.chatGroup.unReadCount = +req.chatGroup.unReadCount + 1;
 			req.chatGroup
 				.save()
 				.then(() => {
@@ -201,17 +202,22 @@ router.put("/read/:msgID", isRead, (req, res, next) => {
 	// console.log(req.user);
 	req.msg.isRead = true;
 
-	req.msg.save((err, result) => {
-		if (err) {
-			// console.log(err);
-			next(new BadRequestResponse(err));
-			return;
-		} else {
-			// console.log(result);
-			next(new OkResponse(req.msg.toJSON()));
-			return;
-		}
-	});
+	ChatGroupModel.findOne({ _id: req.msg.groupChatID })
+		.then((chatGroup) => {
+			if (!chatGroup) {
+				return next(new BadRequestResponse("No chatGroup Found"));
+			}
+			chatGroup.unReadCount = 0;
+			chatGroup.save((err, result) => {
+				if (err) return next(new BadRequestResponse(err));
+				console.log("Unread Count set to 0");
+			});
+			req.msg.save((err, result) => {
+				if (err) return next(new BadRequestResponse(err));
+				return next(new OkResponse(req.msg));
+			});
+		})
+		.catch((err) => next(new BadRequestResponse(err)));
 });
 
 // Get UnRead Count message //Done

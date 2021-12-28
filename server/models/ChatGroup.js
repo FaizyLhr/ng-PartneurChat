@@ -91,4 +91,4 @@ ChatGroupSchema.methods.slugify = function () {
 	this.slug = slug(((Math.random() * Math.pow(36, 6)) | 0).toString(36));
 };
 
-module.exports = mongoose.model("Friend", ChatGroupSchema);
+module.exports = mongoose.model("ChatGroup", ChatGroupSchema);

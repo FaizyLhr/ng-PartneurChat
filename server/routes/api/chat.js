@@ -105,8 +105,22 @@ router.param("imageID", function (req, res, next, _id) {
 		});
 });
 
+// get User for every time userID given
+router.param("userID", function (req, res, next, _id) {
+	UserModel.findOne({ _id })
+		.then((user) => {
+			if (!user) {
+				return next(new BadRequestResponse("No User Found"));
+			}
+			req.user = user;
+			// console.log(req.user);
+			return next();
+		})
+		.catch((err) => next(new BadRequestResponse(err)));
+});
+
 // Add a new Message or Reply a chat Message //Done
-router.post("/add/:chatGroupID/:senderID", isAuthentic, (req, res, next) => {
+router.post("/add/:chatGroupID/:senderID", (req, res, next) => {
 	// console.log(req.body);
 	if (req.body.text === undefined || req.body.text.trim().length === 0) {
 		// console.log("ID");
@@ -196,10 +210,10 @@ router.get("/get/all/:chatGroupID", (req, res, next) => {
 });
 
 // Change chat status to Read //Done
-router.put("/read/:chatGroupID", (req, res, next) => {
+router.put("/read/:chatGroupID/:userID", (req, res, next) => {
 	// console.log(req.user);
 
-	ChatModel.find({ _id: req.chatGroup._id, isRead: false })
+	ChatModel.find({ _id: req.chatGroup._id, isRead: false, receiver: req.user._id })
 		.then((chats) => {
 			if (!chats) {
 				return next(new BadRequestResponse("No chats Found"));
@@ -222,13 +236,10 @@ router.put("/read/:chatGroupID", (req, res, next) => {
 });
 
 // Get UnRead Count message //Done
-router.get("/get/unReadCount/:chatGroupID", (req, res, next) => {
+router.get("/get/unReadCount/:chatGroupID/:userID", (req, res, next) => {
 	// console.log(query);
-	ChatModel.count({ chatGroup: req.chatGroup._id, isRead: false }, (err, count) => {
-		if (err) {
-			console.log(err);
-			return next(new BadRequestResponse(err));
-		}
+	ChatModel.count({ chatGroup: req.chatGroup._id, isRead: false, receiver: req.user._id }, (err, count) => {
+		if (err) next(new BadRequestResponse(err));
 		return next(new OkResponse({ count }));
 	});
 });

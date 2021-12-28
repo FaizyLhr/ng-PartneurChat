@@ -21,6 +21,7 @@ const ChatSchema = new mongoose.Schema(
 			type: mongoose.Schema.Types.ObjectId,
 			ref: "Chat",
 		},
+		readers: [{ type: mongoose.Schema.Types.ObjectId, default: mongoose.Types.ObjectId }],
 		isRead: { type: Boolean, default: false },
 		isDeleted: { type: Boolean, default: false },
 		// isDeleted: [

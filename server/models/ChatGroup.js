@@ -78,6 +78,17 @@ const ChatGroupSchema = new mongoose.Schema(
 );
 
 ChatGroupSchema.plugin(mongoosePaginate);
+
+function prePopulate(next) {
+	this.populate("user1");
+	this.populate("user2");
+	next();
+}
+
+ChatGroupSchema.pre("find", prePopulate);
+ChatGroupSchema.pre("findOne", prePopulate);
+ChatGroupSchema.pre("findById", prePopulate);
+
 // ChatGroupSchema.plugin(uniqueValidator, { message: "is already taken." });
 
 ChatGroupSchema.pre("validate", function (next) {

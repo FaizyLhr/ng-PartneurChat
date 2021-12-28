@@ -134,10 +134,10 @@ router.post("/add/:chatGroupID/:senderID", (req, res, next) => {
 	chat.sender = req.sender._id;
 	chat.text = req.body.text;
 
-	if (req.sender.email === req.chatGroup.user1.email) {
-		chat.receiver = req.chatGroup.user2;
+	if (req.sender._id.toString() === req.chatGroup.user1._id.toString()) {
+		chat.receiver = req.chatGroup.user2._id;
 	} else {
-		chat.receiver = req.chatGroup.user1;
+		chat.receiver = req.chatGroup.user1._id;
 	}
 
 	if (req.body.replyTo) {
@@ -170,7 +170,7 @@ router.post("/add/:chatGroupID/:senderID", (req, res, next) => {
 
 // View All Messages of Friend // Done
 router.get("/get/all/:chatGroupID", (req, res, next) => {
-	console.log(req.chatGroup);
+	// console.log(req.chatGroup);
 	// console.log(req.sender);
 	const options = {
 		page: +req.query.page || 1,
@@ -185,7 +185,7 @@ router.get("/get/all/:chatGroupID", (req, res, next) => {
 
 	ChatModel.paginate(query, options, (err, history) => {
 		if (err) {
-			console.log("err", err);
+			// console.log("err", err);
 			// console.log(err);
 			next(new BadRequestResponse(err));
 		} else {
@@ -211,25 +211,28 @@ router.get("/get/all/:chatGroupID", (req, res, next) => {
 
 // Change chat status to Read //Done
 router.put("/read/:chatGroupID/:userID", (req, res, next) => {
-	// console.log(req.user);
+	// console.log(req.chatGroup._id);
+	// console.log(req.user._id);
 
-	ChatModel.find({ _id: req.chatGroup._id, isRead: false, receiver: req.user._id })
+	ChatModel.find({ chatGroupID: req.chatGroup._id, isRead: false, receiver: req.user._id })
 		.then((chats) => {
 			if (!chats) {
 				return next(new BadRequestResponse("No chats Found"));
 			}
+			// console.log("Chats", chats);
 			chats.forEach((e) => {
-				console.log(e);
+				// console.log(e);
 				e.isRead = true;
 				e.save((err, result) => {
 					if (err) return next(new BadRequestResponse(err));
 					console.log("Msg Read");
 				});
 			});
-			req.chatGroup.unReadCount = 0;
+			// console.log("UNread Count", chats.length);
+			req.chatGroup.unReadCount = +req.chatGroup.unReadCount - chats.length;
 			req.chatGroup.save((err, result) => {
 				if (err) return next(new BadRequestResponse(err));
-				return next(new OkResponse(req.chatGroup));
+				return next(new OkResponse("Done"));
 			});
 		})
 		.catch((err) => next(new BadRequestResponse(err)));
@@ -307,14 +310,14 @@ router.get("/get/read/:chatGroupID/:senderID", isAuthentic, (req, res, next) => 
 			})
 		);
 	}).catch((error) => {
-		console.log(error);
+		// console.log(error);
 		next(new BadRequestResponse(error));
 	});
 });
 
 // Delete a Message //Done
 router.put("/del/:msgID", isMsgDel, (req, res, next) => {
-	console.log(req.user);
+	// console.log(req.user);
 	req.msg.isDeleted = true;
 	req.msg.text = null;
 

@@ -45,6 +45,16 @@ const ChatSchema = new mongoose.Schema(
 
 ChatSchema.plugin(mongoosePaginate);
 
+function prePopulate(next) {
+	this.populate("sender");
+	this.populate("receiver");
+	next();
+}
+
+ChatSchema.pre("find", prePopulate);
+ChatSchema.pre("findOne", prePopulate);
+ChatSchema.pre("findById", prePopulate);
+
 ChatSchema.pre("validate", function (next) {
 	if (!this.slug) {
 		this.slugify();
